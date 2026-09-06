@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application
+        android:allowBackup="false"
+        android:hasCode="true"
+        android:label="Fold8 Feature Spoofer">
+
+        <meta-data android:name="xposedmodule" android:value="true" />
+        <meta-data android:name="xposedminversion" android:value="82" />
+        <meta-data
+            android:name="xposeddescription"
+            android:value="Spoofs Samsung floating-feature values at runtime: AI_VERSION=20263 and NOW_NUDGE_VERSION=2. No system mounts." />
+        <meta-data
+            android:name="xposedscope"
+            android:resource="@array/xposed_scope" />
+    </application>
+</manifest>
