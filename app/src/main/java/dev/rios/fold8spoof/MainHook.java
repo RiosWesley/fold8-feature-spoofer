@@ -410,6 +410,7 @@ public final class MainHook implements IXposedHookLoadPackage {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
                     try {
+                        if (!isSummaryBackendEnabled()) return;
                         Object feature = XposedHelpers.getObjectField(param.thisObject, "featureName");
                         if (!LLM_SUMMARY_FEATURE.equals(String.valueOf(feature))) return;
                         Object req = XposedHelpers.getObjectField(param.thisObject, "serviceRequest");
@@ -581,6 +582,18 @@ public final class MainHook implements IXposedHookLoadPackage {
             return b.toString();
         } catch (Throwable t) {
             return "?";
+        }
+    }
+
+    /** Kill-switch for control experiments (and users): setprop persist.fold8.summary off. */
+    private static boolean isSummaryBackendEnabled() {
+        try {
+            Class<?> sp = Class.forName("android.os.SystemProperties");
+            Object v = sp.getMethod("get", String.class, String.class)
+                    .invoke(null, "persist.fold8.summary", "on");
+            return !"off".equals(String.valueOf(v));
+        } catch (Throwable t) {
+            return true;
         }
     }
 
