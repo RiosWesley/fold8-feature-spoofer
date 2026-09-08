@@ -92,6 +92,19 @@ Result(content≤400ch, safety={"Blocked":false}) ─▶ fluxo original ─▶ U
   depois ~13 s/resumo. Servidor root não precisa recarregar após zygote
   restart.
 
+## Exibição (verificado no aparelho)
+
+- O texto chega ao `mSummarization` (SUCCESS) e ao extra
+  `android.summarization` via `SummarizationDecorator` (telemetria no ar:
+  `sysui decorateSummarization called, text=Nch`).
+- O template mostra o resumo na notificação **expandida**; na **recolhida**
+  aparece a última mensagem crua (comportamento do template
+  `ConversationLayout` neste build).
+- Cada mensagem nova zera o registro (status NONE) e o próximo ciclo
+  (alarme ~10 s após tela apagada + inferência ~13 s) resume de novo.
+- Hook `hookSuccessRenotify`: re-notifica +3 s após cada SUCCESS para
+  forçar rebind depois do extra (corrige race ranking→extra→rebind).
+
 ## v2 planejado — LiteRT + NPU (Gemma3-1B sm8650)
 
 - Google distribui `Gemma3-1B-IT_q4_ekv1280_sm8650.litertlm` (~690 MB,
