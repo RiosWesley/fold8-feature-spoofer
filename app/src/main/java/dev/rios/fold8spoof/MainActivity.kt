@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -142,6 +143,16 @@ class MainActivity : Activity() {
         return row
     }
 
+    private fun gitHubButton(): Button {
+        return button("View source on GitHub", false) {
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW,
+                    Uri.parse("https://github.com/RiosWesley/fold8-feature-spoofer")))
+            } catch (_: Exception) {
+            }
+        }
+    }
+
     // ---------------- WIZARD ----------------
 
     private fun showWizard() {
@@ -203,6 +214,8 @@ class MainActivity : Activity() {
             })
         }
         wizardBox.addView(c)
+        wizardBox.addView(spacer(12))
+        wizardBox.addView(gitHubButton())
         wizardBox.addView(spacer(12))
         wizardBox.addView(navRow({ wizardStep = 0; renderWizardStep() }, {
             wizardStep = 2; renderWizardStep()
@@ -395,6 +408,8 @@ class MainActivity : Activity() {
         }
         logCard.addView(logView)
         mainBox.addView(logCard)
+        mainBox.addView(spacer(12))
+        mainBox.addView(gitHubButton())
     }
 
     // ---------------- LIFECYCLE ----------------
