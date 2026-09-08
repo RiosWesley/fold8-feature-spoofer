@@ -26,7 +26,6 @@ class LlmServerService : Service() {
     companion object {
         const val PORT = 18089
         private const val TAG = "Fold8LlmServer"
-        private const val MODEL_FILE = "model.litertlm"
     }
 
     private val engine = LlmNpuEngine()
@@ -73,11 +72,9 @@ class LlmServerService : Service() {
 
     @Synchronized
     private fun ensureStarted() {
-        val dir = File(filesDir, "llm")
-        if (!dir.isDirectory) dir.mkdirs()
-        val model = File(dir, MODEL_FILE)
-        if (!model.exists()) {
-            note("model.litertlm missing in $dir, server not started")
+        val model = ModelManager.resolve(this)
+        if (model == null) {
+            note("no model yet (open the app to download), server not started")
             return
         }
         if (server == null) {
@@ -189,7 +186,7 @@ class LlmServerService : Service() {
                 return
             }
             val t0 = System.currentTimeMillis()
-            val out = engine.generate(conversation, maxTokens)
+            val out = engine.generate(conversation, maxTokens, SummaryLang.systemPrompt(this@LlmServerService))
             if (out.isNullOrEmpty()) {
                 reply(s, 500, "{\"error\":\"empty generation\"}")
                 return

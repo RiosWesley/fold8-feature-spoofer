@@ -49,15 +49,12 @@ final class LlmNpuEngine {
     }
 
     /** One-shot summary generation. Returns null on failure. */
-    fun generate(conversation: String, maxTokens: Int): String? {
+    fun generate(conversation: String, maxTokens: Int, systemPrompt: String): String? {
         val e: Engine
         synchronized(lock) { e = engine ?: return null }
         // Fresh conversation per request: stateless like the llama-server backend.
-        val sys = "Resuma as mensagens a seguir em ate tres frases curtas em " +
-            "portugues, focando nos pontos principais e nas acoes a tomar. " +
-            "Responda apenas com o resumo, sem traduzir."
         val cfg = ConversationConfig(
-            systemInstruction = Contents.of(sys),
+            systemInstruction = Contents.of(systemPrompt),
             samplerConfig = SamplerConfig(topK = 64, topP = 0.95, temperature = 0.2, seed = 0),
             maxOutputToken = maxTokens.coerceIn(32, 512),
         )

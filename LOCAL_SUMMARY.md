@@ -120,6 +120,20 @@ Result(content≤400ch, safety={"Blocked":false}) ─▶ fluxo original ─▶ U
 - Resultado: **~1 s/resumo na NPU** (antes ~13 s na CPU).
 - Arquivo NPU-only: fallback CPU impossível (sem seção CPU no modelo).
 
+## v2.1 — módulo compartilhável (este branch, em andamento)
+
+- `ModelManager.kt`: detecta SoC (`ro.soc.model`/`board`: sm8550 kalama,
+  sm8650 pineapple, sm8750 sun) e baixa o `.litertlm` certo do
+  `dl.google.com` (público, sem auth) com resume (`Range`) + verificação
+  de tamanho; SoC desconhecido/Tensor → CPU `int4` (584 MB). Migra o
+  nome legado `model.litertlm`.
+- `SummaryLang.kt`: `auto` (responde no idioma predominante das
+  mensagens — validado EN→EN), `device` (locale do aparelho) ou ISO
+  explícito (16 idiomas). Resolvido no serviço — hook intacto.
+- `MainActivity.kt`: tela de setup (status modelo/servidor, SoC,
+  spinner de idioma, botão download com progresso, instruções de scope
+  do LSPosed).
+
 ## Notas da investigação v2 (histórico)
 
 - Google distribui `Gemma3-1B-IT_q4_ekv1280_sm8650.litertlm` (~690 MB,

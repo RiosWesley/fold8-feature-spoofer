@@ -426,7 +426,7 @@ public final class MainHook implements IXposedHookLoadPackage {
                         Object task = XposedHelpers.getObjectField(source, "task");
                         XposedHelpers.callMethod(task, "setResult", result);
                         param.setResult(null);
-                        XposedBridge.log("[" + TAG + "] local CPU summary served, len="
+                        XposedBridge.log("[" + TAG + "] local summary served, len="
                                 + summary.length());
                     } catch (Throwable t) {
                         logError(lp, "localSummary", t);
