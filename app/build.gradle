@@ -1,5 +1,6 @@
 plugins {
     id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
 }
 
 android {
@@ -13,8 +14,8 @@ android {
         // can execute its own helper binaries (llama-server). API 34+
         // domains forbid exec of app_data_file.
         targetSdk 28
-        versionCode 9
-        versionName '1.8'
+        versionCode 10
+        versionName '1.9-npu'
     }
 
     buildTypes {
@@ -26,12 +27,23 @@ android {
         }
     }
 
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
     }
 }
 
 dependencies {
     compileOnly 'de.robv.android.xposed:api:82'
+    implementation 'com.google.ai.edge.litertlm:litertlm-android:0.17.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
 }

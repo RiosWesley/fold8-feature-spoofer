@@ -105,7 +105,22 @@ Result(content≤400ch, safety={"Blocked":false}) ─▶ fluxo original ─▶ U
 - Hook `hookSuccessRenotify`: re-notifica +3 s após cada SUCCESS para
   forçar rebind depois do extra (corrige race ranking→extra→rebind).
 
-## v2 planejado — LiteRT + NPU (Gemma3-1B sm8650)
+## v2 concluído — LiteRT + NPU (Gemma3-1B sm8650)
+
+- Backend trocado: `LlmServerService.java` (llama-server/Qwen CPU) →
+  `LlmServerService.kt` + `LlmNpuEngine.kt` (LiteRT-LM 0.17.0, Kotlin 2.4.0).
+- Modelo: `Gemma3-1B-IT_q4_ekv1280_sm8650.litertlm` (658 MB) copiado do
+  Edge Gallery para `files/llm/model.litertlm` (fora do git).
+- NPU via `Backend.NPU(nativeLibraryDir)` com `libQnnHtpV75Skel.so` etc.
+  em `jniLibs/arm64-v8a` (extração forçada: `extractNativeLibs=true` +
+  `useLegacyPackaging=true` — sem isso o loader QNN falha com
+  `Failed to allocate tensors` no warmup).
+- Mesmo contrato HTTP (`/health`, `/v1/chat/completions`) — hook sem
+  mudança lógica (só `model_alias` → `gemma3-npu`).
+- Resultado: **~1 s/resumo na NPU** (antes ~13 s na CPU).
+- Arquivo NPU-only: fallback CPU impossível (sem seção CPU no modelo).
+
+## Notas da investigação v2 (histórico)
 
 - Google distribui `Gemma3-1B-IT_q4_ekv1280_sm8650.litertlm` (~690 MB,
   compilado para este SoC) + runtime NPU v75 (split

@@ -417,7 +417,7 @@ public final class MainHook implements IXposedHookLoadPackage {
                         Bundle b = new Bundle();
                         b.putString("content", summary);
                         b.putString("safety", "{\"Blocked\":false}");
-                        b.putString("model_alias", "qwen-cpu");
+                        b.putString("model_alias", "gemma3-npu");
                         Object result = XposedHelpers.newInstance(
                                 XposedHelpers.findClass(
                                         "com.samsung.android.sdk.scs.ai.language.Result",

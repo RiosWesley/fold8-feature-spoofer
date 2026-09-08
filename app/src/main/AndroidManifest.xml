@@ -3,6 +3,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:allowBackup="false"
+        android:extractNativeLibs="true"
         android:hasCode="true"
         android:label="Fold8 Feature Spoofer">
 
