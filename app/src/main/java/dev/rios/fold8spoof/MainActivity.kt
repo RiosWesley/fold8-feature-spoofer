@@ -30,7 +30,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        startService(Intent(this, LlmServerService::class.java))
+        startForegroundService(Intent(this, LlmServerService::class.java))
         val pad = (16 * resources.displayMetrics.density).toInt()
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -143,7 +143,7 @@ class MainActivity : Activity() {
         Thread({
             val existing = ModelManager.resolve(this)
             if (existing != null) {
-                startService(Intent(this, LlmServerService::class.java))
+                startForegroundService(Intent(this, LlmServerService::class.java))
                 runOnUiThread {
                     actionButton.text = "Check & download model"
                     refreshStatus()
@@ -178,7 +178,7 @@ class MainActivity : Activity() {
                     }
                 }
                 // Cleanup partial leftovers of the winning file only; keep it simple.
-                startService(Intent(this, LlmServerService::class.java))
+                startForegroundService(Intent(this, LlmServerService::class.java))
                 runOnUiThread { progressView.text = "Done. Server starting…" }
             } catch (t: Throwable) {
                 runOnUiThread {
