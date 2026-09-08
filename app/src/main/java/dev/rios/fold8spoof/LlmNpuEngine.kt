@@ -17,6 +17,7 @@ final class LlmNpuEngine {
 
     private var engine: Engine? = null
     private val lock = Any()
+    private val inferLock = Any()
 
     /** Blocking init (call off the main thread). Returns true when usable. */
     fun init(modelPath: String, nativeLibDir: String, cacheDir: String): Boolean {
@@ -48,10 +49,11 @@ final class LlmNpuEngine {
         }
     }
 
-    /** One-shot summary generation. Returns null on failure. */
+    /** One-shot summary generation. Serialized: one NPU inference at a time. */
     fun generate(conversation: String, maxTokens: Int, systemPrompt: String): String? {
         val e: Engine
         synchronized(lock) { e = engine ?: return null }
+        synchronized(inferLock) {
         // Fresh conversation per request: stateless like the llama-server backend.
         val cfg = ConversationConfig(
             systemInstruction = Contents.of(systemPrompt),
@@ -70,6 +72,7 @@ final class LlmNpuEngine {
             android.util.Log.w("Fold8LlmServer", "litert generate failed: $t")
             null
         }
+        } // inferLock
     }
 
     fun close() {

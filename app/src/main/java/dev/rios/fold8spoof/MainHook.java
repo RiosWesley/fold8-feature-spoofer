@@ -399,6 +399,8 @@ public final class MainHook implements IXposedHookLoadPackage {
 
     private static void hookSummaryInference(final XC_LoadPackage.LoadPackageParam lp) {
         hookFreshness(lp);
+        hookSummaryLimiter(lp);
+        hookDeviceGate(lp);
         hookSuccessRenotify(lp);
         try {
             Class<?> runnable = XposedHelpers.findClass(
@@ -463,6 +465,118 @@ public final class MainHook implements IXposedHookLoadPackage {
                     + lp.packageName + " / " + lp.processName);
         } catch (Throwable t) {
             logError(lp, "hookSysUiSummarization", t);
+        }
+        hookSysUiRenderDebug(lp);
+    }
+
+    /** Debug-only: per-row summarization render inputs (remove after diagnosis). */
+    private static void hookSysUiRenderDebug(final XC_LoadPackage.LoadPackageParam lp) {
+        try {
+            Class<?> entry = XposedHelpers.findClass(
+                    "com.android.systemui.statusbar.notification.collection.NotificationEntry",
+                    lp.classLoader);
+            XposedBridge.hookAllMethods(entry, "getSummarization", new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    try {
+                        Object res = param.getResult();
+                        if (res == null || String.valueOf(res).isEmpty()) return;
+                        Object key = XposedHelpers.getObjectField(param.thisObject, "key");
+                        XposedBridge.log("[" + TAG + "] sysui entry has summary: key=" + key
+                                + " len=" + String.valueOf(res).length());
+                    } catch (Throwable t) {
+                        logError(lp, "sysuiEntrySumLog", t);
+                    }
+                }
+            });
+            XposedBridge.log("[" + TAG + "] hooked sysui NotificationEntry.getSummarization in "
+                    + lp.packageName + " / " + lp.processName);
+        } catch (Throwable t) {
+            logError(lp, "hookSysUiEntrySum", t);
+        }
+        try {
+            Class<?> layout = XposedHelpers.findClass(
+                    "com.android.internal.widget.ConversationLayout", null);
+            if (layout == null) {
+                XposedBridge.log("[" + TAG + "] ConversationLayout not found in "
+                        + lp.packageName + " / " + lp.processName);
+                return;
+            }
+            XposedBridge.hookAllMethods(layout, "setIsCollapsed", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    try {
+                        XposedBridge.log("[" + TAG + "] sysui ConversationLayout.setIsCollapsed="
+                                + (param.args != null && param.args.length > 0 ? param.args[0] : "?"));
+                    } catch (Throwable t) {
+                        logError(lp, "sysuiCollapseLog", t);
+                    }
+                }
+            });
+            XposedBridge.hookAllMethods(layout, "setData", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    try {
+                        boolean hasSum = false;
+                        if (param.args != null && param.args.length > 0
+                                && param.args[0] instanceof android.os.Bundle) {
+                            hasSum = ((android.os.Bundle) param.args[0])
+                                    .containsKey("android.summarization");
+                        }
+                        boolean collapsed = Boolean.TRUE.equals(
+                                XposedHelpers.getObjectField(param.thisObject, "mIsCollapsed"));
+                        XposedBridge.log("[" + TAG + "] sysui ConversationLayout.setData hasSumExtra="
+                                + hasSum + " collapsed=" + collapsed);
+                    } catch (Throwable t) {
+                        logError(lp, "sysuiSetDataLog", t);
+                    }
+                }
+            });
+            XposedBridge.log("[" + TAG + "] hooked sysui ConversationLayout in "
+                    + lp.packageName + " / " + lp.processName);
+        } catch (Throwable t) {
+            logError(lp, "hookSysUiLayout", t);
+        }
+    }
+
+    private static void hookSummaryLimiter(final XC_LoadPackage.LoadPackageParam lp) {
+        try {
+            Class<?> limiter = XposedHelpers.findClass(
+                    "com.android.server.notification.sec.summarize.NotiSumamryLimiter",
+                    lp.classLoader);
+            XposedBridge.hookAllMethods(limiter, "isLimited", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    param.setResult(false);
+                }
+            });
+            XposedBridge.log("[" + TAG + "] hooked NotiSumamryLimiter.isLimited -> false in "
+                    + lp.packageName + " / " + lp.processName);
+        } catch (Throwable t) {
+            logError(lp, "hookSummaryLimiter", t);
+        }
+    }
+
+    /**
+     * On-demand summaries: bypass screen-off / battery / powersave gates so
+     * every new message triggers inference within seconds (NPU ~1-2 s).
+     * The 12 h quota is already neutralized via hookSummaryLimiter.
+     */
+    private static void hookDeviceGate(final XC_LoadPackage.LoadPackageParam lp) {
+        try {
+            Class<?> mgr = XposedHelpers.findClass(
+                    "com.android.server.notification.sec.summarize.NotiSummaryManager",
+                    lp.classLoader);
+            XposedBridge.hookAllMethods(mgr, "checkDeviceStateForSummary", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    param.setResult(true);
+                }
+            });
+            XposedBridge.log("[" + TAG + "] hooked NotiSummaryManager.checkDeviceStateForSummary -> true in "
+                    + lp.packageName + " / " + lp.processName);
+        } catch (Throwable t) {
+            logError(lp, "hookDeviceGate", t);
         }
     }
 
