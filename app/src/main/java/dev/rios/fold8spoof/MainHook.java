@@ -480,10 +480,27 @@ public final class MainHook implements IXposedHookLoadPackage {
                 protected void afterHookedMethod(MethodHookParam param) {
                     try {
                         Object res = param.getResult();
-                        if (res == null || String.valueOf(res).isEmpty()) return;
                         Object key = XposedHelpers.getObjectField(param.thisObject, "key");
-                        XposedBridge.log("[" + TAG + "] sysui entry has summary: key=" + key
-                                + " len=" + String.valueOf(res).length());
+                        boolean hl = false;
+                        int semPr = -1;
+                        try {
+                            hl = Boolean.TRUE.equals(
+                                    XposedHelpers.callMethod(param.thisObject, "isHighlightsStyle"));
+                        } catch (Throwable ignored) {
+                        }
+                        try {
+                            Object sbn = XposedHelpers.getObjectField(param.thisObject, "mSbn");
+                            Object notif = sbn == null ? null
+                                    : XposedHelpers.callMethod(sbn, "getNotification");
+                            if (notif != null) {
+                                semPr = XposedHelpers.getIntField(notif, "semPriority");
+                            }
+                        } catch (Throwable ignored) {
+                        }
+                        String sum = (res == null || String.valueOf(res).isEmpty())
+                                ? "empty" : ("len=" + String.valueOf(res).length());
+                        XposedBridge.log("[" + TAG + "] sysui rowsec: key=" + key
+                                + " sum=" + sum + " hlStyle=" + hl + " semPriority=" + semPr);
                     } catch (Throwable t) {
                         logError(lp, "sysuiEntrySumLog", t);
                     }
