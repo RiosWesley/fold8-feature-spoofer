@@ -9,9 +9,12 @@ android {
     defaultConfig {
         applicationId 'dev.rios.fold8spoof'
         minSdk 28
-        targetSdk 35
-        versionCode 7
-        versionName '1.6'
+        // Target 28 keeps the base untrusted_app SELinux domain so the app
+        // can execute its own helper binaries (llama-server). API 34+
+        // domains forbid exec of app_data_file.
+        targetSdk 28
+        versionCode 9
+        versionName '1.8'
     }
 
     buildTypes {

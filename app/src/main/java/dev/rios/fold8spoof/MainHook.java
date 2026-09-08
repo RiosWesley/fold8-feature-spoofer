@@ -1,6 +1,10 @@
 package dev.rios.fold8spoof;
 
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
 import android.content.res.Resources;
+import android.os.Bundle;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -43,6 +47,7 @@ public final class MainHook implements IXposedHookLoadPackage {
         if (ANDROID_PACKAGE.equals(lp.packageName)) {
             hookScsOndeviceCapability(lp);
             hookSummaryLanguageNormalization(lp);
+            hookSummaryInference(lp);
         }
     }
 
@@ -384,5 +389,237 @@ public final class MainHook implements IXposedHookLoadPackage {
 
     private static void logError(XC_LoadPackage.LoadPackageParam lp, String where, Throwable t) {
         XposedBridge.log("[" + TAG + "] " + lp.packageName + " " + where + " hook error: " + t);
+    }
+
+    private static final String LLM_SUMMARY_FEATURE = "FEATURE_AI_GEN_SUMMARY";
+
+    private static void hookSummaryInference(final XC_LoadPackage.LoadPackageParam lp) {
+        hookFreshness(lp);
+        try {
+            Class<?> runnable = XposedHelpers.findClass(
+                    "com.samsung.android.sdk.scs.ai.language.service.LlmServiceRunnable",
+                    lp.classLoader);
+            XposedBridge.hookAllMethods(runnable, "execute", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    try {
+                        Object feature = XposedHelpers.getObjectField(param.thisObject, "featureName");
+                        if (!LLM_SUMMARY_FEATURE.equals(String.valueOf(feature))) return;
+                        Object req = XposedHelpers.getObjectField(param.thisObject, "serviceRequest");
+                        String text = String.valueOf(XposedHelpers.getObjectField(req, "f$2"));
+                        String summary = generateLocalSummary(lp, text);
+                        if (summary == null || summary.isEmpty()) return;
+                        Bundle b = new Bundle();
+                        b.putString("content", summary);
+                        b.putString("safety", "{\"Blocked\":false}");
+                        b.putString("model_alias", "qwen-cpu");
+                        Object result = XposedHelpers.newInstance(
+                                XposedHelpers.findClass(
+                                        "com.samsung.android.sdk.scs.ai.language.Result",
+                                        lp.classLoader), b);
+                        Object source = XposedHelpers.getObjectField(param.thisObject, "mSource");
+                        Object task = XposedHelpers.getObjectField(source, "task");
+                        XposedHelpers.callMethod(task, "setResult", result);
+                        param.setResult(null);
+                        XposedBridge.log("[" + TAG + "] local CPU summary served, len="
+                                + summary.length());
+                    } catch (Throwable t) {
+                        logError(lp, "localSummary", t);
+                    }
+                }
+            });
+            XposedBridge.log("[" + TAG + "] hooked LlmServiceRunnable.execute in "
+                    + lp.packageName + " / " + lp.processName);
+        } catch (Throwable t) {
+            logError(lp, "hookSummaryInference", t);
+        }
+    }
+
+    private static void hookFreshness(final XC_LoadPackage.LoadPackageParam lp) {
+        try {
+            Class<?> mgr = XposedHelpers.findClass(
+                    "com.android.server.notification.sec.summarize.NotiSummaryManager",
+                    lp.classLoader);
+            XposedBridge.hookAllMethods(mgr, "isFresh", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    param.setResult(false);
+                }
+            });
+            XposedBridge.log("[" + TAG + "] hooked NotiSummaryManager.isFresh -> false in "
+                    + lp.packageName + " / " + lp.processName);
+        } catch (Throwable t) {
+            logError(lp, "hookFreshness", t);
+        }
+    }
+
+    private static String generateLocalSummary(XC_LoadPackage.LoadPackageParam lp, String text) {
+        try {
+            String conversation = extractConversation(text);
+            if (conversation == null || conversation.length() < 10) return null;
+            ensureLlmServer();
+            if (!waitForServer(150000)) {
+                XposedBridge.log("[" + TAG + "] LLM server not ready, falling back");
+                return null;
+            }
+            String prompt = conversation;
+            String out = postChat(prompt, 120);
+            if (out == null || out.trim().isEmpty()) return null;
+            out = out.trim();
+            if (out.regionMatches(true, 0, "Resumo:", 0, 7)) {
+                out = out.substring(7).trim();
+            } else if (out.regionMatches(true, 0, "Summary:", 0, 8)) {
+                out = out.substring(8).trim();
+            }
+            if (out.length() > 400) {
+                int cut = out.lastIndexOf('.', 400);
+                if (cut < 100) cut = out.lastIndexOf(' ', 400);
+                out = (cut > 100 ? out.substring(0, cut + 1) : out.substring(0, 400)).trim();
+            }
+            return out;
+        } catch (Throwable t) {
+            logError(lp, "generateLocalSummary", t);
+            return null;
+        }
+    }
+
+    private static String extractConversation(String text) {
+        if (text == null) return null;
+        try {
+            String t = text.trim();
+            if (t.startsWith("{")) {
+                JSONObject o = new JSONObject(t);
+                if (o.has("conversation")) return o.optString("conversation", null);
+            }
+        } catch (Throwable ignored) {
+        }
+        return text;
+    }
+
+    private static void ensureLlmServer() {
+        try {
+            Class<?> at = XposedHelpers.findClass("android.app.ActivityThread", null);
+            Object app = XposedHelpers.callStaticMethod(at, "currentApplication");
+            if (app == null) return;
+            Context ctx = (Context) app;
+            Intent i = new Intent();
+            i.setComponent(new ComponentName("dev.rios.fold8spoof",
+                    "dev.rios.fold8spoof.LlmServerService"));
+            ctx.startService(i);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private static boolean waitForServer(long timeoutMs) {
+        long deadline = System.currentTimeMillis() + timeoutMs;
+        while (System.currentTimeMillis() < deadline) {
+            java.net.HttpURLConnection c = null;
+            try {
+                java.net.URL url = new java.net.URL("http://127.0.0.1:"
+                        + LlmServerService.PORT + "/health");
+                c = (java.net.HttpURLConnection) url.openConnection();
+                c.setConnectTimeout(2000);
+                c.setReadTimeout(2000);
+                if (c.getResponseCode() == 200) return true;
+            } catch (Throwable ignored) {
+            } finally {
+                if (c != null) c.disconnect();
+            }
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException ignored) {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    private static String postChat(String conversation, int maxTokens) {
+        java.net.HttpURLConnection c = null;
+        try {
+            java.net.URL url = new java.net.URL("http://127.0.0.1:"
+                    + LlmServerService.PORT + "/v1/chat/completions");
+            c = (java.net.HttpURLConnection) url.openConnection();
+            c.setConnectTimeout(10000);
+            c.setReadTimeout(180000);
+            c.setDoOutput(true);
+            c.setRequestMethod("POST");
+            c.setRequestProperty("Content-Type", "application/json");
+            JSONObject req = new JSONObject();
+            JSONArray messages = new JSONArray();
+            JSONObject system = new JSONObject();
+            system.put("role", "system");
+            system.put("content", "Resuma as mensagens a seguir em ate tres frases curtas em "
+                    + "portugues, focando nos pontos principais e nas acoes a tomar. "
+                    + "Responda apenas com o resumo, sem traduzir.");
+            JSONObject user = new JSONObject();
+            user.put("role", "user");
+            user.put("content", conversation);
+            messages.put(system);
+            messages.put(user);
+            req.put("messages", messages);
+            req.put("temperature", 0.2);
+            req.put("max_tokens", maxTokens);
+            req.put("cache_prompt", true);
+            byte[] body = req.toString().getBytes("UTF-8");
+            java.io.OutputStream os = c.getOutputStream();
+            os.write(body);
+            os.flush();
+            os.close();
+            if (c.getResponseCode() != 200) return null;
+            java.io.InputStream in = c.getInputStream();
+            java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) >= 0) bos.write(buf, 0, n);
+            in.close();
+            JSONObject resp = new JSONObject(bos.toString("UTF-8"));
+            JSONArray choices = resp.optJSONArray("choices");
+            if (choices == null || choices.length() == 0) return null;
+            JSONObject msg = choices.optJSONObject(0).optJSONObject("message");
+            if (msg == null) return null;
+            return msg.optString("content", null);
+        } catch (Throwable t) {
+            return null;
+        } finally {
+            if (c != null) c.disconnect();
+        }
+    }
+
+    private static String postCompletion(String prompt, int nPredict) {
+        java.net.HttpURLConnection c = null;
+        try {
+            java.net.URL url = new java.net.URL("http://127.0.0.1:"
+                    + LlmServerService.PORT + "/completion");
+            c = (java.net.HttpURLConnection) url.openConnection();
+            c.setConnectTimeout(10000);
+            c.setReadTimeout(180000);
+            c.setDoOutput(true);
+            c.setRequestMethod("POST");
+            c.setRequestProperty("Content-Type", "application/json");
+            JSONObject req = new JSONObject();
+            req.put("prompt", prompt);
+            req.put("n_predict", nPredict);
+            req.put("temperature", 0.2);
+            req.put("cache_prompt", true);
+            byte[] body = req.toString().getBytes("UTF-8");
+            java.io.OutputStream os = c.getOutputStream();
+            os.write(body);
+            os.flush();
+            os.close();
+            if (c.getResponseCode() != 200) return null;
+            java.io.InputStream in = c.getInputStream();
+            java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) >= 0) bos.write(buf, 0, n);
+            in.close();
+            JSONObject resp = new JSONObject(bos.toString("UTF-8"));
+            return resp.optString("content", null);
+        } catch (Throwable t) {
+            return null;
+        } finally {
+            if (c != null) c.disconnect();
+        }
     }
 }
