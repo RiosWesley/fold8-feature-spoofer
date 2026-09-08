@@ -44,6 +44,10 @@ public final class MainHook implements IXposedHookLoadPackage {
             hookSettingsNotificationIntelligenceGate(lp);
         }
 
+        if ("com.android.systemui".equals(lp.packageName)) {
+            hookSysUiSummarization(lp);
+        }
+
         if (ANDROID_PACKAGE.equals(lp.packageName)) {
             hookScsOndeviceCapability(lp);
             hookSummaryLanguageNormalization(lp);
@@ -395,6 +399,7 @@ public final class MainHook implements IXposedHookLoadPackage {
 
     private static void hookSummaryInference(final XC_LoadPackage.LoadPackageParam lp) {
         hookFreshness(lp);
+        hookSuccessRenotify(lp);
         try {
             Class<?> runnable = XposedHelpers.findClass(
                     "com.samsung.android.sdk.scs.ai.language.service.LlmServiceRunnable",
@@ -435,8 +440,84 @@ public final class MainHook implements IXposedHookLoadPackage {
         }
     }
 
-    private static void hookFreshness(final XC_LoadPackage.LoadPackageParam lp) {
+    private static void hookSysUiSummarization(final XC_LoadPackage.LoadPackageParam lp) {
         try {
+            Class<?> decorator = XposedHelpers.findClass(
+                    "com.android.systemui.statusbar.notification.collection.coordinator.SummarizationDecorator",
+                    lp.classLoader);
+            XposedBridge.hookAllMethods(decorator, "decorateSummarization", new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    try {
+                        Object entry = param.args != null && param.args.length > 0 ? param.args[0] : null;
+                        Object sum = entry == null ? null
+                                : XposedHelpers.callMethod(entry, "getSummarization");
+                        XposedBridge.log("[" + TAG + "] sysui decorateSummarization called, text="
+                                + (sum == null ? "null" : String.valueOf(sum).length() + "ch"));
+                    } catch (Throwable t) {
+                        logError(lp, "sysuiDecorateLog", t);
+                    }
+                }
+            });
+            XposedBridge.log("[" + TAG + "] hooked sysui SummarizationDecorator in "
+                    + lp.packageName + " / " + lp.processName);
+        } catch (Throwable t) {
+            logError(lp, "hookSysUiSummarization", t);
+        }
+    }
+
+    private static void hookSuccessRenotify(final XC_LoadPackage.LoadPackageParam lp) {
+        try {
+            Class<?> lambda15 = XposedHelpers.findClass(
+                    "com.android.server.notification.NotificationManagerService$$ExternalSyntheticLambda15",
+                    lp.classLoader);
+            XposedBridge.hookAllMethods(lambda15, "accept", new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    try {
+                        Object classId = XposedHelpers.getObjectField(param.thisObject, "$r8$classId");
+                        if (!(classId instanceof Integer) || ((Integer) classId) != 0) return;
+                        Object status = param.args != null && param.args.length > 0 ? param.args[0] : null;
+                        if (status == null || !"SUCCESS".equals(String.valueOf(status))) return;
+                        final Object nms = XposedHelpers.getObjectField(param.thisObject, "f$0");
+                        final String key = String.valueOf(XposedHelpers.getObjectField(param.thisObject, "f$1"));
+                        android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+                        h.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    Object lock = XposedHelpers.getObjectField(nms, "mNotificationLock");
+                                    synchronized (lock) {
+                                        Object map = XposedHelpers.getObjectField(nms, "mNotificationsByKey");
+                                        Object record = XposedHelpers.callMethod(map, "get", key);
+                                        if (record == null) return;
+                                        Object st = XposedHelpers.getObjectField(record, "mSummaryStatus");
+                                        Object tx = XposedHelpers.getObjectField(record, "mSummarization");
+                                        if (st == null || !"SUCCESS".equals(String.valueOf(st))) return;
+                                        if (tx == null || String.valueOf(tx).isEmpty()) return;
+                                        Object rankingHandler = XposedHelpers.getObjectField(nms, "mRankingHandler");
+                                        XposedHelpers.callMethod(rankingHandler, "requestSort");
+                                        XposedHelpers.callMethod(nms, "notifyListenersSilently", record);
+                                        XposedBridge.log("[" + TAG + "] summary re-notified for rebind: " + key);
+                                    }
+                                } catch (Throwable t) {
+                                    XposedBridge.log("[" + TAG + "] renotify error: " + t);
+                                }
+                            }
+                        }, 3000);
+                    } catch (Throwable t) {
+                        logError(lp, "renotifyHook", t);
+                    }
+                }
+            });
+            XposedBridge.log("[" + TAG + "] hooked summary SUCCESS renotify in "
+                    + lp.packageName + " / " + lp.processName);
+        } catch (Throwable t) {
+            logError(lp, "hookSuccessRenotify", t);
+        }
+    }
+
+    private static void hookFreshness(final XC_LoadPackage.LoadPackageParam lp) {        try {
             Class<?> mgr = XposedHelpers.findClass(
                     "com.android.server.notification.sec.summarize.NotiSummaryManager",
                     lp.classLoader);
