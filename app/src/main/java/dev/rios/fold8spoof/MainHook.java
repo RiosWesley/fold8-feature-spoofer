@@ -540,7 +540,7 @@ public final class MainHook implements IXposedHookLoadPackage {
                         String sum = (res == null || String.valueOf(res).isEmpty())
                                 ? "empty" : ("len=" + String.valueOf(res).length());
                         String k = String.valueOf(key);
-                        if (k.length() > 24) k = "…" + k.substring(k.length() - 23);
+                        if (k.length() > 20) k = k.substring(k.length() - 19);
                         String row = "";
                         try {
                             Object r = XposedHelpers.getObjectField(param.thisObject, "row");
@@ -549,12 +549,12 @@ public final class MainHook implements IXposedHookLoadPackage {
                                         XposedHelpers.callMethod(r, "isExpanded"));
                                 boolean uexp = Boolean.TRUE.equals(
                                         XposedHelpers.callMethod(r, "isUserExpanded"));
-                                row = " exp=" + exp + " uexp=" + uexp;
+                                row = " " + (exp ? "1" : "0") + (uexp ? "1" : "0");
                             }
                         } catch (Throwable ignored) {
                         }
-                        XposedBridge.log("[" + TAG + "] rowsec " + k
-                                + " " + sum + " hl=" + hl + " sp=" + semPr + row);
+                        XposedBridge.log("[F8] rs " + k
+                                + " " + sum + " " + (hl ? "1" : "0") + " " + semPr + row);
                     } catch (Throwable t) {
                         logError(lp, "sysuiEntrySumLog", t);
                     }
