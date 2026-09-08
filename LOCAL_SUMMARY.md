@@ -120,7 +120,14 @@ Result(content≤400ch, safety={"Blocked":false}) ─▶ fluxo original ─▶ U
 - Resultado: **~1 s/resumo na NPU** (antes ~13 s na CPU).
 - Arquivo NPU-only: fallback CPU impossível (sem seção CPU no modelo).
 
-## v2.1 — módulo compartilhável (este branch, em andamento)
+## v2.1 — módulo compartilhável (este branch)
+
+- E2E validado no aparelho 13:04–13:06: 5 serves NPU (0,6–2 s),
+  `summary re-notified` aplicado, **3× `mSummaryStatus=SUCCESS`**
+  (grupo WhatsApp + 2 Telegram). Render é o template stock
+  (inalterado pela troca de backend).
+- Cada mensagem nova zera o registro: resumo fixa após janela quieta
+  (~2 min sem chegadas) com tela apagada + bateria > 30%.
 
 - `ModelManager.kt`: detecta SoC (`ro.soc.model`/`board`: sm8550 kalama,
   sm8650 pineapple, sm8750 sun) e baixa o `.litertlm` certo do
