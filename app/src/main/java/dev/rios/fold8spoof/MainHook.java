@@ -541,8 +541,20 @@ public final class MainHook implements IXposedHookLoadPackage {
                                 ? "empty" : ("len=" + String.valueOf(res).length());
                         String k = String.valueOf(key);
                         if (k.length() > 24) k = "…" + k.substring(k.length() - 23);
+                        String row = "";
+                        try {
+                            Object r = XposedHelpers.getObjectField(param.thisObject, "row");
+                            if (r != null) {
+                                boolean exp = Boolean.TRUE.equals(
+                                        XposedHelpers.callMethod(r, "isExpanded"));
+                                boolean uexp = Boolean.TRUE.equals(
+                                        XposedHelpers.callMethod(r, "isUserExpanded"));
+                                row = " exp=" + exp + " uexp=" + uexp;
+                            }
+                        } catch (Throwable ignored) {
+                        }
                         XposedBridge.log("[" + TAG + "] rowsec " + k
-                                + " " + sum + " hl=" + hl + " sp=" + semPr);
+                                + " " + sum + " hl=" + hl + " sp=" + semPr + row);
                     } catch (Throwable t) {
                         logError(lp, "sysuiEntrySumLog", t);
                     }
