@@ -552,6 +552,14 @@ public final class MainHook implements IXposedHookLoadPackage {
                     }
                 }
             });
+            // Freeze the panel-open demotion counter: highlighted rows stay
+            // highlighted while flagged instead of demoting after 2 opens.
+            XposedBridge.hookAllMethods(coord, "updateHighlightsPanelOpenCount", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    param.setResult(null);
+                }
+            });
             XposedBridge.log("[F8] hooked SemHighlightsCoordinator");
         } catch (Throwable t) {
             logError(lp, "hookHlSectionTrace", t);
