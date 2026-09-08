@@ -54,6 +54,11 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
+    // Sideloaded root module, not Play-distributed: targetSdk 28 is
+    // intentional (SELinux domain allows native exec + background starts).
+    lint {
+        disable 'ExpiredTargetSdkVersion'
+    }
 }
 
 dependencies {
