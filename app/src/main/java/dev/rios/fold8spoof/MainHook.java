@@ -44,6 +44,10 @@ public final class MainHook implements IXposedHookLoadPackage {
             hookSettingsNotificationIntelligenceGate(lp);
         }
 
+        if ("com.android.systemui".equals(lp.packageName)) {
+            hookHlSectionTrace(lp);
+        }
+
         if (ANDROID_PACKAGE.equals(lp.packageName)) {
             hookScsOndeviceCapability(lp);
             hookSummaryLanguageNormalization(lp);
@@ -528,6 +532,47 @@ public final class MainHook implements IXposedHookLoadPackage {
                     + lp.packageName + " / " + lp.processName);
         } catch (Throwable t) {
             logError(lp, "hookDeviceGate", t);
+        }
+    }
+
+    /** Debug: logs Highlights section membership changes with timestamps. */
+    private static void hookHlSectionTrace(final XC_LoadPackage.LoadPackageParam lp) {
+        try {
+            Class<?> coord = XposedHelpers.findClass(
+                    "com.android.systemui.statusbar.notification.collection.coordinator.SemHighlightsCoordinator",
+                    lp.classLoader);
+            XposedBridge.hookAllMethods(coord, "updateHighlightsOrder", new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    try {
+                        Object keys = XposedHelpers.getObjectField(param.thisObject, "mCurrentHighlightsKeys");
+                        XposedBridge.log("[F8] hlkeys=" + shortKeys(String.valueOf(keys)));
+                    } catch (Throwable t) {
+                        logError(lp, "hlKeysLog", t);
+                    }
+                }
+            });
+            XposedBridge.log("[F8] hooked SemHighlightsCoordinator");
+        } catch (Throwable t) {
+            logError(lp, "hookHlSectionTrace", t);
+        }
+    }
+
+    private static String shortKeys(String s) {
+        try {
+            String[] parts = s.replace("[", "").replace("]", "").split(", ");
+            StringBuilder b = new StringBuilder();
+            for (String k : parts) {
+                String[] f = k.split("\\|");
+                String tag = f.length > 3 ? f[3] : k;
+                if (tag.length() > 8) tag = tag.substring(tag.length() - 8);
+                if (b.length() > 0) b.append(',');
+                b.append(tag);
+                if (b.length() > 120) break;
+            }
+            return b.toString();
+        } catch (Throwable t) {
+            return "?";
         }
     }
 
