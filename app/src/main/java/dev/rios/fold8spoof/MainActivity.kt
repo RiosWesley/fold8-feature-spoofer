@@ -5,6 +5,8 @@ import android.content.Intent
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.widget.AdapterView
@@ -21,10 +23,11 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Setup + status + event log viewer.
- * Dark One UI-style cards, no external dependencies.
+ * Dark One UI-style cards, no external dependencies. English UI.
  */
 class MainActivity : Activity() {
     private lateinit var statusDot: View
@@ -37,6 +40,17 @@ class MainActivity : Activity() {
     private lateinit var logView: TextView
     private val downloading = AtomicBoolean(false)
     private val cancelled = AtomicBoolean(false)
+    private val serverOk = AtomicBoolean(false)
+    private val autoTries = AtomicInteger(0)
+    private val autoHandler = Handler(Looper.getMainLooper())
+    private val autoRefresh = object : Runnable {
+        override fun run() {
+            if (serverOk.get() || autoTries.incrementAndGet() > 45) return
+            refreshStatus()
+            refreshLogs()
+            autoHandler.postDelayed(this, 4000)
+        }
+    }
 
     private val bg = 0xFF000000.toInt()
     private val card = 0xFF1E1E1E.toInt()
@@ -48,12 +62,11 @@ class MainActivity : Activity() {
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
-    private fun rounded(color: Int, radius: Int, stroke: Int = 0, strokeColor: Int = 0): GradientDrawable {
+    private fun rounded(color: Int, radius: Int): GradientDrawable {
         return GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = dp(radius).toFloat()
             setColor(color)
-            if (stroke > 0) setStroke(dp(stroke), strokeColor)
         }
     }
 
@@ -99,19 +112,18 @@ class MainActivity : Activity() {
             setPadding(dp(16), dp(20), dp(16), dp(20))
         }
 
-        // Header
         root.addView(TextView(this).apply {
-            text = "✨ Resumos locais NPU"
+            text = "✨ Local NPU Summaries"
             textSize = 22f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(0xFFFFFFFF.toInt())
         })
-        root.addView(bodyText("Galaxy AI summaries, 100% on-device (Gemma 3 1B, NPU).", 13f))
+        root.addView(bodyText("Galaxy AI-style summaries, 100% on-device (Gemma 3 1B, NPU).", 13f))
         root.addView(spacer(14))
 
-        // ---- STATUS card ----
+        // ---- STATUS card (auto-refreshes until the engine is up) ----
         val statusCard = cardBox()
-        statusCard.addView(sectionTitle("Estado"))
+        statusCard.addView(sectionTitle("Status"))
         val statusRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         statusDot = View(this).apply {
             background = rounded(gray, 20)
@@ -121,27 +133,20 @@ class MainActivity : Activity() {
             }
         }
         statusRow.addView(statusDot)
-        statusView = bodyText("verificando…")
+        statusView = bodyText("checking…")
         statusRow.addView(statusView)
         statusCard.addView(statusRow)
         modelView = bodyText("")
         statusCard.addView(modelView)
-        val refreshBtn = Button(this).apply {
-            text = "Atualizar estado"
-            background = rounded(0xFF2C2C2C.toInt(), 12)
-            setTextColor(0xFFFFFFFF.toInt())
-            setOnClickListener { refreshStatus() }
-        }
-        statusCard.addView(refreshBtn)
         root.addView(statusCard)
         root.addView(spacer(12))
 
         // ---- MODEL card ----
         val modelCard = cardBox()
-        modelCard.addView(sectionTitle("Modelo"))
+        modelCard.addView(sectionTitle("Model"))
         modelCard.addView(bodyText(
-            "SoC detectado: ${ModelManager.socTag()}\n" +
-                "O app baixa sozinho o arquivo certo (~600–700 MB, use Wi-Fi)."))
+            "Detected SoC: ${ModelManager.socTag()}\n" +
+                "The app downloads the right file by itself (~600–700 MB, use Wi-Fi)."))
         progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 1000
             visibility = View.GONE
@@ -150,7 +155,7 @@ class MainActivity : Activity() {
         progressView = bodyText("")
         modelCard.addView(progressView)
         actionButton = Button(this).apply {
-            text = "Baixar modelo"
+            text = "Download model"
             background = rounded(accent, 12)
             setTextColor(0xFFFFFFFF.toInt())
             setOnClickListener { onAction() }
@@ -161,7 +166,7 @@ class MainActivity : Activity() {
 
         // ---- LANGUAGE card ----
         val langCard = cardBox()
-        langCard.addView(sectionTitle("Idioma do resumo"))
+        langCard.addView(sectionTitle("Summary language"))
         val options = SummaryLang.OPTIONS
         val spinner = Spinner(this).apply {
             adapter = ArrayAdapter(
@@ -195,30 +200,30 @@ class MainActivity : Activity() {
 
         // ---- HOW IT WORKS card ----
         val howCard = cardBox()
-        howCard.addView(sectionTitle("Como funciona"))
+        howCard.addView(sectionTitle("How it works"))
         howCard.addView(bodyText(
-            "1. Ative o módulo no LSPosed com escopo em Sistema Framework, System UI e Configurações, e reinicie.\n" +
-                "2. Abra este app uma vez e baixe o modelo.\n" +
-                "3. Novas mensagens disparam o resumo na NPU em ~1–2 s; ele aparece recolhido na notificação (✨).\n" +
-                "4. Cada mensagem nova zera o resumo até o próximo ciclo (~10 s) — comportamento original da Samsung."))
+            "1. Enable the module in LSPosed (scope: Android System, System UI, Settings) and reboot.\n" +
+                "2. Open this app once and download the model.\n" +
+                "3. New messages trigger an NPU summary in ~1–2 s; it shows collapsed on the notification (✨).\n" +
+                "4. Each new message resets the summary until the next cycle (~10 s) — stock Samsung behavior."))
         root.addView(howCard)
         root.addView(spacer(12))
 
         // ---- LOGS card ----
         val logCard = cardBox()
-        logCard.addView(sectionTitle("Registro de resumos"))
+        logCard.addView(sectionTitle("Summary log"))
         logCard.addView(bodyText(
-            "✓ resumida · … aguardando motor · ✗ motivo da falha (ex.: idioma não detectado, texto curto).", 12.5f))
+            "✓ summarized · … waiting for engine · ✗ failure reason (e.g. language not detected, text too short).", 12.5f))
         val logBtnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         val logRefresh = Button(this).apply {
-            text = "Atualizar"
+            text = "Refresh"
             background = rounded(0xFF2C2C2C.toInt(), 12)
             setTextColor(0xFFFFFFFF.toInt())
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             setOnClickListener { refreshLogs() }
         }
         val logClear = Button(this).apply {
-            text = "Limpar"
+            text = "Clear"
             background = rounded(0xFF2C2C2C.toInt(), 12)
             setTextColor(0xFFFFFFFF.toInt())
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
@@ -239,32 +244,40 @@ class MainActivity : Activity() {
         logCard.addView(logView)
         root.addView(logCard)
 
-        val scroll = ScrollView(this).apply {
+        setContentView(ScrollView(this).apply {
             setBackgroundColor(bg)
             addView(root)
-        }
-        setContentView(scroll)
+        })
     }
 
     private fun langExplanation(mode: String): String {
         return when (mode) {
             SummaryLang.AUTO ->
-                "Automático (experimental): responde no idioma predominante das mensagens. " +
-                    "O modelo 1B às vezes vaza para o inglês em conversas não-inglesas (vazamento PT→EN comprovado). " +
-                    "Se ver resumo em inglês numa conversa em português, troque para “Idioma do aparelho”."
+                "Automatic (experimental): answers in the predominant language of the messages. " +
+                    "The 1B model sometimes leaks into English on non-English chats (proven PT→EN leak). " +
+                    "If you see an English summary on a non-English chat, switch to “Device language”."
             SummaryLang.DEVICE ->
-                "Idioma do aparelho (recomendado e padrão): resume sempre no idioma configurado no sistema, " +
-                    "que para quase todo mundo é o idioma das conversas."
+                "Device language (recommended, default): always summarizes in the system language, " +
+                    "which matches the chat language for almost everyone."
             else ->
-                "Fixo em ${SummaryLang.languageName(mode)}: todo resumo sai neste idioma, " +
-                    "independentemente do idioma das mensagens."
+                "Pinned to ${SummaryLang.languageName(mode)}: every summary comes out in this language, " +
+                    "regardless of the messages."
         }
     }
 
     override fun onResume() {
         super.onResume()
+        serverOk.set(false)
+        autoTries.set(0)
+        autoHandler.removeCallbacks(autoRefresh)
         refreshStatus()
         refreshLogs()
+        autoHandler.postDelayed(autoRefresh, 4000)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        autoHandler.removeCallbacks(autoRefresh)
     }
 
     private fun setDot(color: Int) {
@@ -272,29 +285,28 @@ class MainActivity : Activity() {
     }
 
     private fun refreshStatus() {
-        statusView.text = "verificando…"
-        setDot(gray)
         Thread({
             val model = ModelManager.resolve(this)
             val health = probeHealth()
             runOnUiThread {
                 if (health != null && health.startsWith("ok")) {
+                    serverOk.set(true)
                     setDot(green)
-                    statusView.text = "Servidor ativo ($health)"
+                    statusView.text = "Engine up ($health)"
                 } else if (model != null) {
                     setDot(amber)
-                    statusView.text = "Modelo pronto, motor iniciando… (${health ?: "parado"})"
+                    statusView.text = "Model ready, engine starting… (${health ?: "stopped"})"
                 } else {
                     setDot(red)
-                    statusView.text = "Sem modelo — baixe abaixo"
+                    statusView.text = "No model — download below"
                 }
                 modelView.text = if (model != null) {
-                    "Modelo: ${model.name} (${model.length() / 1048576} MB)"
+                    "Model: ${model.name} (${model.length() / 1048576} MB)"
                 } else {
                     val plan = ModelManager.plan().firstOrNull()
-                    "Falta baixar: ${plan?.fileName ?: "?"} (~${(plan?.bytes ?: 0) / 1048576} MB)"
+                    "Missing: ${plan?.fileName ?: "?"} (~${(plan?.bytes ?: 0) / 1048576} MB)"
                 }
-                actionButton.text = if (model != null) "Verificar novamente" else "Baixar modelo"
+                actionButton.text = if (model != null) "Check again" else "Download model"
             }
         }, "setup-status").apply { isDaemon = true; start() }
     }
@@ -308,12 +320,12 @@ class MainActivity : Activity() {
             s.getOutputStream().write("GET /health HTTP/1.0\r\n\r\n".toByteArray())
             val buf = ByteArray(512)
             val n = s.getInputStream().read(buf)
-            if (n <= 0) return "inacessível"
+            if (n <= 0) return "unreachable"
             val body = String(buf, 0, n, Charsets.UTF_8)
             if ("\"ok\"" in body) {
                 val backend = Regex("\"backend\"\\s*:\\s*\"(.*?)\"").find(body)?.groupValues?.get(1)
                 if (backend != null) "ok ($backend)" else "ok"
-            } else "iniciando…"
+            } else "starting…"
         } catch (_: Exception) {
             null
         } finally {
@@ -326,7 +338,7 @@ class MainActivity : Activity() {
             val events = SummaryEventReceiver.readEvents(this)
             val fmt = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
             val text = if (events.isEmpty()) {
-                "Nenhum evento ainda.\nOs pedidos e resultados aparecem aqui quando chegam mensagens."
+                "No events yet.\nRequests and results show up here as messages arrive."
             } else {
                 events.takeLast(40).reversed().joinToString("\n") { line ->
                     val p = line.split('|')
@@ -339,19 +351,18 @@ class MainActivity : Activity() {
                     val key = SummaryEventReceiver.shortKey(p.getOrNull(2) ?: "-")
                     val status = p.getOrNull(3) ?: "-"
                     val len = p.getOrNull(4) ?: "-"
-                    val icon = when {
-                        kind == "requested" -> "…"
-                        status == "SUCCESS" -> "✓"
-                        status.startsWith("ERROR") -> "✗"
-                        else -> "•"
-                    }
-                    val extra = if (kind == "requested") {
+                    val detail = p.getOrNull(5) ?: ""
+                    if (kind == "requested") {
                         val l = if (len != "-") " ${len}ch" else ""
-                        "pedido$l"
+                        "$time … $key requested$l" + (if (detail.isNotEmpty()) "\n    “$detail”" else "")
                     } else {
-                        status
+                        val icon = when {
+                            status == "SUCCESS" -> "✓"
+                            status.startsWith("ERROR") -> "✗"
+                            else -> "•"
+                        }
+                        "$time $icon $key $status"
                     }
-                    "$time $icon $key $extra"
                 }
             }
             runOnUiThread { logView.text = text }
@@ -368,7 +379,9 @@ class MainActivity : Activity() {
             if (existing != null) {
                 startForegroundService(Intent(this, LlmServerService::class.java))
                 runOnUiThread {
-                    actionButton.text = "Verificar novamente"
+                    actionButton.text = "Check again"
+                    serverOk.set(false)
+                    autoTries.set(0)
                     refreshStatus()
                 }
                 return@Thread
@@ -376,7 +389,7 @@ class MainActivity : Activity() {
             if (!downloading.compareAndSet(false, true)) return@Thread
             cancelled.set(false)
             runOnUiThread {
-                actionButton.text = "Cancelar download"
+                actionButton.text = "Cancel download"
                 progressBar.visibility = View.VISIBLE
             }
             try {
@@ -399,18 +412,20 @@ class MainActivity : Activity() {
                         android.util.Log.w("Fold8Setup", "download failed for ${candidate.fileName}: $t")
                     }
                 }
-                if (!done) throw java.io.IOException("todas as fontes falharam")
+                if (!done) throw java.io.IOException("all sources failed")
                 startForegroundService(Intent(this, LlmServerService::class.java))
-                runOnUiThread { progressView.text = "Pronto. Servidor iniciando…" }
+                runOnUiThread { progressView.text = "Done. Starting engine…" }
             } catch (t: Throwable) {
                 runOnUiThread {
-                    progressView.text = if (cancelled.get()) "Cancelado." else "Falhou: ${t.message}"
+                    progressView.text = if (cancelled.get()) "Cancelled." else "Failed: ${t.message}"
                 }
             } finally {
                 downloading.set(false)
                 runOnUiThread {
-                    actionButton.text = "Baixar modelo"
+                    actionButton.text = "Download model"
                     progressBar.visibility = View.GONE
+                    serverOk.set(false)
+                    autoTries.set(0)
                     refreshStatus()
                 }
             }

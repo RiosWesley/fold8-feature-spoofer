@@ -414,7 +414,9 @@ public final class MainHook implements IXposedHookLoadPackage {
                         if (!LLM_SUMMARY_FEATURE.equals(String.valueOf(feature))) return;
                         Object req = XposedHelpers.getObjectField(param.thisObject, "serviceRequest");
                         String text = String.valueOf(XposedHelpers.getObjectField(req, "f$2"));
-                        broadcastEvent("requested", bestEffortKey(param.thisObject), "-", text == null ? -1 : text.length());
+                        String excerpt = text == null ? "" : text.replaceAll("\\s+", " ").trim();
+                        if (excerpt.length() > 140) excerpt = excerpt.substring(0, 140) + "…";
+                        broadcastEvent("requested", bestEffortKey(param.thisObject), "-", text == null ? -1 : text.length(), excerpt);
                         String summary = generateLocalSummary(lp, text);
                         if (summary == null || summary.isEmpty()) return;
                         Bundle b = new Bundle();
@@ -461,7 +463,7 @@ public final class MainHook implements IXposedHookLoadPackage {
     }
 
     /** Mirrors a summary lifecycle event to the app for the in-app log viewer. */
-    private static void broadcastEvent(String kind, String key, String status, int len) {
+    private static void broadcastEvent(String kind, String key, String status, int len, String detail) {
         try {
             Class<?> at = XposedHelpers.findClass("android.app.ActivityThread", null);
             Object app = XposedHelpers.callStaticMethod(at, "currentApplication");
@@ -473,6 +475,7 @@ public final class MainHook implements IXposedHookLoadPackage {
             i.putExtra("key", key == null ? "-" : key);
             i.putExtra("status", status == null ? "-" : status);
             i.putExtra("len", len);
+            i.putExtra("detail", detail == null ? "" : detail);
             ctx.sendBroadcast(i);
         } catch (Throwable t) {
             XposedBridge.log("[" + TAG + "] event mirror failed: " + t);
@@ -661,7 +664,7 @@ public final class MainHook implements IXposedHookLoadPackage {
                         if (status == null) return;
                         final Object nms = XposedHelpers.getObjectField(param.thisObject, "f$0");
                         final String key = String.valueOf(XposedHelpers.getObjectField(param.thisObject, "f$1"));
-                        broadcastEvent("result", key, String.valueOf(status), -1);
+                        broadcastEvent("result", key, String.valueOf(status), -1, "");
                         if (!"SUCCESS".equals(String.valueOf(status))) return;
                         android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
                         h.postDelayed(new Runnable() {

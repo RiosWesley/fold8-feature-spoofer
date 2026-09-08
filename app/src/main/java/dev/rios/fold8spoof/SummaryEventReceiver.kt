@@ -10,8 +10,8 @@ import java.io.File
  * (explicit intra-app broadcast, no permissions needed) and appends them
  * to a bounded local log for the in-app viewer.
  *
- * Line format: ts|kind|key|status|len
- *   kind = requested | result
+ * Line format: ts|kind|key|status|len|detail
+ *   kind = requested | result ; detail = request text excerpt (requested only)
  */
 class SummaryEventReceiver : BroadcastReceiver() {
     companion object {
@@ -55,9 +55,10 @@ class SummaryEventReceiver : BroadcastReceiver() {
             val line = listOf(
                 System.currentTimeMillis().toString(),
                 intent.getStringExtra("kind") ?: "?",
-                intent.getStringExtra("key") ?: "-",
+                (intent.getStringExtra("key") ?: "-").replace("|", "/"),
                 intent.getStringExtra("status") ?: "-",
                 intent.getIntExtra("len", -1).toString(),
+                (intent.getStringExtra("detail") ?: "").replace("|", "/").replace("\n", " "),
             ).joinToString("|")
             synchronized(lock) {
                 val f = File(dir, FILE)
