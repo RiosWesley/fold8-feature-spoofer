@@ -23,7 +23,7 @@ object ModelManager {
     // Google pulled the dl.google.com NPU files (404 since 2026-09-08):
     // stable mirror hosted on this project's releases.
     private const val MIRROR_BASE =
-        "https://github.com/RiosWesley/apps/releases/download/litert-models-20260310/"
+        "https://github.com/RiosWesley/fold8-feature-spoofer/releases/download/litert-models-20260310/"
     private const val CPU_URL =
         "https://dl.google.com/google-ai-edge-gallery/android/gemma3-1b-it/20260217/gemma3-1b-it-int4.litertlm"
     private const val CPU_BYTES = 584417280L
