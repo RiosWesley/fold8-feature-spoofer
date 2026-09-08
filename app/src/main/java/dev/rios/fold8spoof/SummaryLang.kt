@@ -30,9 +30,21 @@ object SummaryLang {
 
     fun getMode(ctx: Context): String =
         try {
-            ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getString(KEY, AUTO) ?: AUTO
+            val prefs = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+            // One-time migration: early builds persisted "auto" without user
+            // interaction (spinner init callback). The 1B model does not
+            // reliably follow "predominant language" (proven PT->EN leak),
+            // while the phone locale matches the chat language for nearly
+            // every user — so inherited "auto" becomes "device".
+            if (!prefs.contains("v2migrated")) {
+                val stored = prefs.getString(KEY, DEVICE) ?: DEVICE
+                val fixed = if (stored == AUTO) DEVICE else stored
+                prefs.edit().putString(KEY, fixed).putBoolean("v2migrated", true).apply()
+                return fixed
+            }
+            prefs.getString(KEY, DEVICE) ?: DEVICE
         } catch (_: Throwable) {
-            AUTO
+            DEVICE
         }
 
     fun setMode(ctx: Context, mode: String) {

@@ -133,6 +133,12 @@ Result(content≤400ch, safety={"Blocked":false}) ─▶ fluxo original ─▶ U
 - `MainActivity.kt`: tela de setup (status modelo/servidor, SoC,
   spinner de idioma, botão download com progresso, instruções de scope
   do LSPosed).
+- Serviço é **foreground** (notificação persistente): sem isso a Samsung
+  congela o app em background (`freezing ... reason: Bg`) justo com a
+  tela apagada, quando os resumos precisam dele.
+- Padrão de idioma = **device** (não auto): provado que o 1B ignora
+  "idioma predominante" (PT→EN). Migração única auto→device + guarda
+  no spinner (não persistir seleção programática).
 
 ## Notas da investigação v2 (histórico)
 

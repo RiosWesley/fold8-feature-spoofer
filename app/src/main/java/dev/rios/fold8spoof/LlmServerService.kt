@@ -49,6 +49,33 @@ class LlmServerService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        try {
+            val nm = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
+            if (android.os.Build.VERSION.SDK_INT >= 26) {
+                nm.createNotificationChannel(
+                    android.app.NotificationChannel(
+                        "litert", "Resumos locais", android.app.NotificationManager.IMPORTANCE_MIN,
+                    ),
+                )
+            }
+            val n = if (android.os.Build.VERSION.SDK_INT >= 26) {
+                android.app.Notification.Builder(this, "litert")
+                    .setContentTitle("Resumos de notificação ativos")
+                    .setContentText("Motor local (LiteRT) em 127.0.0.1:$PORT")
+                    .setSmallIcon(android.R.drawable.ic_dialog_info)
+                    .build()
+            } else {
+                @Suppress("DEPRECATION")
+                android.app.Notification.Builder(this)
+                    .setContentTitle("Resumos de notificação ativos")
+                    .setContentText("Motor local (LiteRT) em 127.0.0.1:$PORT")
+                    .setSmallIcon(android.R.drawable.ic_dialog_info)
+                    .build()
+            }
+            startForeground(1, n)
+        } catch (t: Throwable) {
+            note("foreground failed: $t")
+        }
         ensureStarted()
         if (watchdog == null) {
             watchdog = Handler(Looper.getMainLooper())

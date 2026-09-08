@@ -30,6 +30,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        startService(Intent(this, LlmServerService::class.java))
         val pad = (16 * resources.displayMetrics.density).toInt()
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -57,8 +58,14 @@ class MainActivity : Activity() {
         }
         val currentMode = SummaryLang.getMode(this)
         spinner.setSelection(options.indexOfFirst { it.first == currentMode }.coerceAtLeast(0))
+        var spinnerArmed = false
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
+                // First callback comes from setSelection, not the user.
+                if (!spinnerArmed) {
+                    spinnerArmed = true
+                    return
+                }
                 SummaryLang.setMode(this@MainActivity, options[pos].first)
             }
             override fun onNothingSelected(p: AdapterView<*>?) {}
