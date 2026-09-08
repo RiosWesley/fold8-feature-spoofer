@@ -20,6 +20,10 @@ object ModelManager {
     const val LEGACY_FILE = "model.litertlm"
 
     private const val NPU_BASE = "https://dl.google.com/google-ai-edge-gallery/android/gemma3-1b-npu/20260310/"
+    // Google pulled the dl.google.com NPU files (404 since 2026-09-08):
+    // stable mirror hosted on this project's releases.
+    private const val MIRROR_BASE =
+        "https://github.com/RiosWesley/apps/releases/download/litert-models-20260310/"
     private const val CPU_URL =
         "https://dl.google.com/google-ai-edge-gallery/android/gemma3-1b-it/20260217/gemma3-1b-it-int4.litertlm"
     private const val CPU_BYTES = 584417280L
@@ -39,7 +43,7 @@ object ModelManager {
             "sm8550" in t || "kalama" in t ->
                 ModelCandidate("model-npu.litertlm", NPU_BASE + "Gemma3-1B-IT_q4_ekv1280_sm8550.litertlm", 690143232L)
             "sm8650" in t || "pineapple" in t ->
-                ModelCandidate("model-npu.litertlm", NPU_BASE + "Gemma3-1B-IT_q4_ekv1280_sm8650.litertlm", 690094080L)
+                ModelCandidate("model-npu.litertlm", MIRROR_BASE + "gemma3-1b-sm8650.litertlm", 690094080L)
             "sm8750" in t || "sun" in t ->
                 ModelCandidate("model-npu.litertlm", NPU_BASE + "Gemma3-1B-IT_q4_ekv1280_sm8750.litertlm", 689291264L)
             else -> null
