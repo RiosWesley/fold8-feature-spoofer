@@ -539,8 +539,10 @@ public final class MainHook implements IXposedHookLoadPackage {
                         }
                         String sum = (res == null || String.valueOf(res).isEmpty())
                                 ? "empty" : ("len=" + String.valueOf(res).length());
-                        XposedBridge.log("[" + TAG + "] sysui rowsec: key=" + key
-                                + " sum=" + sum + " hlStyle=" + hl + " semPriority=" + semPr);
+                        String k = String.valueOf(key);
+                        if (k.length() > 24) k = "…" + k.substring(k.length() - 23);
+                        XposedBridge.log("[" + TAG + "] rowsec " + k
+                                + " " + sum + " hl=" + hl + " sp=" + semPr);
                     } catch (Throwable t) {
                         logError(lp, "sysuiEntrySumLog", t);
                     }
