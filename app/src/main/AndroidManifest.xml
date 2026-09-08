@@ -21,6 +21,14 @@
             android:name=".LlmServerService"
             android:exported="true" />
 
+        <receiver
+            android:name=".SummaryEventReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="dev.rios.fold8spoof.SUMMARY_EVENT" />
+            </intent-filter>
+        </receiver>
+
         <activity
             android:name=".MainActivity"
             android:exported="true">

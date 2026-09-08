@@ -414,6 +414,7 @@ public final class MainHook implements IXposedHookLoadPackage {
                         if (!LLM_SUMMARY_FEATURE.equals(String.valueOf(feature))) return;
                         Object req = XposedHelpers.getObjectField(param.thisObject, "serviceRequest");
                         String text = String.valueOf(XposedHelpers.getObjectField(req, "f$2"));
+                        broadcastEvent("requested", bestEffortKey(param.thisObject), "-", text == null ? -1 : text.length());
                         String summary = generateLocalSummary(lp, text);
                         if (summary == null || summary.isEmpty()) return;
                         Bundle b = new Bundle();
@@ -439,6 +440,42 @@ public final class MainHook implements IXposedHookLoadPackage {
                     + lp.packageName + " / " + lp.processName);
         } catch (Throwable t) {
             logError(lp, "hookSummaryInference", t);
+        }
+    }
+
+    /** Best-effort notification key from the SCS runnable (may be absent). */
+    private static String bestEffortKey(Object runnable) {
+        try {
+            Object source = XposedHelpers.getObjectField(runnable, "mSource");
+            if (source == null) return "-";
+            for (String f : new String[]{"key", "mKey", "notificationKey"}) {
+                try {
+                    Object v = XposedHelpers.getObjectField(source, f);
+                    if (v instanceof String && !((String) v).isEmpty()) return (String) v;
+                } catch (Throwable ignored) {
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return "-";
+    }
+
+    /** Mirrors a summary lifecycle event to the app for the in-app log viewer. */
+    private static void broadcastEvent(String kind, String key, String status, int len) {
+        try {
+            Class<?> at = XposedHelpers.findClass("android.app.ActivityThread", null);
+            Object app = XposedHelpers.callStaticMethod(at, "currentApplication");
+            if (app == null) return;
+            Context ctx = (Context) app;
+            Intent i = new Intent("dev.rios.fold8spoof.SUMMARY_EVENT");
+            i.setPackage("dev.rios.fold8spoof");
+            i.putExtra("kind", kind);
+            i.putExtra("key", key == null ? "-" : key);
+            i.putExtra("status", status == null ? "-" : status);
+            i.putExtra("len", len);
+            ctx.sendBroadcast(i);
+        } catch (Throwable t) {
+            XposedBridge.log("[" + TAG + "] event mirror failed: " + t);
         }
     }
 
@@ -621,9 +658,11 @@ public final class MainHook implements IXposedHookLoadPackage {
                         Object classId = XposedHelpers.getObjectField(param.thisObject, "$r8$classId");
                         if (!(classId instanceof Integer) || ((Integer) classId) != 0) return;
                         Object status = param.args != null && param.args.length > 0 ? param.args[0] : null;
-                        if (status == null || !"SUCCESS".equals(String.valueOf(status))) return;
+                        if (status == null) return;
                         final Object nms = XposedHelpers.getObjectField(param.thisObject, "f$0");
                         final String key = String.valueOf(XposedHelpers.getObjectField(param.thisObject, "f$1"));
+                        broadcastEvent("result", key, String.valueOf(status), -1);
+                        if (!"SUCCESS".equals(String.valueOf(status))) return;
                         android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
                         h.postDelayed(new Runnable() {
                             @Override
