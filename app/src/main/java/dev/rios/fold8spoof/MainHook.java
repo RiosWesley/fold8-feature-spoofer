@@ -573,6 +573,18 @@ public final class MainHook implements IXposedHookLoadPackage {
                     param.setResult(true);
                 }
             });
+            // Force first=true: re-summaries use ALARM_FIRST_DELAY (~10 s)
+            // instead of ALARM_INTERVAL (3 min), so a reset summary comes
+            // back in seconds after any re-post.
+            XposedBridge.hookAllMethods(mgr, "requestAll", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    if (param.args != null && param.args.length > 1
+                            && param.args[1] instanceof Boolean) {
+                        param.args[1] = true;
+                    }
+                }
+            });
             XposedBridge.log("[" + TAG + "] hooked NotiSummaryManager.checkDeviceStateForSummary -> true in "
                     + lp.packageName + " / " + lp.processName);
         } catch (Throwable t) {
