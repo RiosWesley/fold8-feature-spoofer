@@ -169,34 +169,73 @@ class MainActivity : Activity() {
             val text = if (events.isEmpty()) {
                 "No events yet.\nRequests, results and highlight changes show up here as messages arrive."
             } else {
-                events.takeLast(40).reversed().joinToString("\n") { line ->
+                // Group by notification key: latest requested + latest result per conversation.
+                val byKey = LinkedHashMap<String, Array<String?>>()
+                val order = ArrayList<String>()
+                for (line in events) {
                     val p = line.split('|')
-                    val time = try {
-                        fmt.format(Date(p[0].toLong()))
-                    } catch (_: Exception) {
-                        "??:??:??"
+                    if (p.size < 6) continue
+                    val kind = p[1]
+                    if (kind != "requested" && kind != "result") continue
+                    val key = p[2]
+                    val slot = byKey.getOrPut(key) {
+                        order.add(key)
+                        arrayOfNulls(2)
                     }
-                    val kind = p.getOrNull(1) ?: "?"
-                    val key = SummaryEventReceiver.shortKey(p.getOrNull(2) ?: "-")
-                    val status = p.getOrNull(3) ?: "-"
-                    val len = p.getOrNull(4) ?: "-"
-                    val detail = p.getOrNull(5) ?: ""
-                    if (kind == "highlight") {
-                        "$time ◆ HL: ${(if (detail.isNotEmpty()) detail else "(none)")}"
-                    } else if (kind == "requested") {
-                        val l = if (len != "-") " ${len}ch" else ""
-                        "$time … $key requested$l" + (if (detail.isNotEmpty()) "\n    “$detail”" else "")
-                    } else {
-                        val icon = when {
-                            status == "SUCCESS" -> "✓"
-                            status.startsWith("ERROR") -> "✗"
-                            else -> "•"
-                        }
-                        "$time $icon $key $status"
+                    if (kind == "requested") slot[0] = line else slot[1] = line
+                }
+                if (order.isEmpty()) {
+                    "No summary events yet (only highlight changes so far)."
+                } else {
+                    order.takeLast(15).reversed().joinToString("\n\n") { key ->
+                        val slot = byKey[key] ?: arrayOfNulls(2)
+                        val title = conversationTitle(key, slot[0])
+                        val reqLine = slot[0]?.let { formatRequested(it, fmt) } ?: "- never requested"
+                        val resLine = slot[1]?.let { formatResult(it, fmt) } ?: "... waiting for result"
+                        "$title\n$reqLine\n$resLine"
                     }
                 }
             }
             runOnUiThread { logView.text = text }
         }, "setup-logs").apply { isDaemon = true; start() }
+    }
+    private fun conversationTitle(key: String, reqLine: String?): String {
+        val parts = key.split('|')
+        val pkg = parts.getOrNull(1)?.substringAfterLast('.') ?: "?"
+        val detail = reqLine?.split('|')?.getOrNull(5) ?: ""
+        val senders = detail.substringBefore(" | ").substringAfter("·", "")
+            .split(',').filter { it.isNotEmpty() }.take(2).joinToString(", ")
+        val who = if (senders.isNotEmpty()) senders else key.takeLast(8)
+        return "▸ $pkg · $who"
+    }
+
+    private fun formatRequested(line: String, fmt: SimpleDateFormat): String {
+        val p = line.split('|')
+        val time = timeOf(p, fmt)
+        val detail = p.getOrNull(5) ?: ""
+        val meta = detail.substringBefore(" | ")
+        val excerpt = detail.substringAfter(" | ", "")
+        val len = p.getOrNull(4) ?: "-"
+        return time + " \u2026 requested " + (if (len != "-") len + "ch " else "") + "(" + meta + ")" + (if (excerpt.isNotEmpty()) "\n    \u201c" + excerpt + "\u201d" else "")
+    }
+
+    private fun formatResult(line: String, fmt: SimpleDateFormat): String {
+        val p = line.split('|')
+        val time = timeOf(p, fmt)
+        val status = p.getOrNull(3) ?: "-"
+        val icon = when {
+            status == "SUCCESS" -> "\u2713"
+            status.startsWith("ERROR") -> "\u2717"
+            else -> "\u2022"
+        }
+        return time + " " + icon + " " + status
+    }
+
+    private fun timeOf(p: List<String>, fmt: SimpleDateFormat): String {
+        return try {
+            fmt.format(Date(p[0].toLong()))
+        } catch (_: Exception) {
+            "??:??:??"
+        }
     }
 }

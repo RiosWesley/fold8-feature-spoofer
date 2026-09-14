@@ -393,57 +393,83 @@ public final class MainHook implements IXposedHookLoadPackage {
         XposedBridge.log("[" + TAG + "] " + lp.packageName + " " + where + " hook error: " + t);
     }
 
-    private static final String LLM_SUMMARY_FEATURE = "FEATURE_AI_GEN_SUMMARY";
-
     private static void hookSummaryInference(final XC_LoadPackage.LoadPackageParam lp) {
         hookFreshness(lp);
         hookSummaryLimiter(lp);
         hookDeviceGate(lp);
         hookSuccessRenotify(lp);
+        hookSummaryRequested(lp);
+    }
+
+    /**
+     * Observes summary requests with the REAL notification key + input stats.
+     * NotiSummaryManager$$ExternalSyntheticLambda0(classId=0) carries
+     * f$1 = notification key, f$2 = NotiSummaryInput.
+     */
+    private static void hookSummaryRequested(final XC_LoadPackage.LoadPackageParam lp) {
         try {
-            Class<?> runnable = XposedHelpers.findClass(
-                    "com.samsung.android.sdk.scs.ai.language.service.LlmServiceRunnable",
+            Class<?> lambda0 = XposedHelpers.findClass(
+                    "com.android.server.notification.sec.summarize.NotiSummaryManager$$ExternalSyntheticLambda0",
                     lp.classLoader);
-            XposedBridge.hookAllMethods(runnable, "execute", new XC_MethodHook() {
+            XposedBridge.hookAllMethods(lambda0, "accept", new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
                     try {
-                        Object feature = XposedHelpers.getObjectField(param.thisObject, "featureName");
-                        if (!LLM_SUMMARY_FEATURE.equals(String.valueOf(feature))) return;
-                        Object req = XposedHelpers.getObjectField(param.thisObject, "serviceRequest");
-                        String text = String.valueOf(XposedHelpers.getObjectField(req, "f$2"));
-                        String excerpt = text == null ? "" : text.replaceAll("\\s+", " ").trim();
-                        if (excerpt.length() > 140) excerpt = excerpt.substring(0, 140) + "…";
-                        broadcastEvent("requested", bestEffortKey(param.thisObject), "-", text == null ? -1 : text.length(), excerpt);
-                        // Native only: Samsung's own OLM/NPU path runs, we observe.
-                        return;
+                        Object classId = XposedHelpers.getObjectField(param.thisObject, "$r8$classId");
+                        if (!(classId instanceof Integer) || ((Integer) classId) != 0) return;
+                        String key = String.valueOf(XposedHelpers.getObjectField(param.thisObject, "f$1"));
+                        Object input = XposedHelpers.getObjectField(param.thisObject, "f$2");
+                        String detail = "?";
+                        int len = -1;
+                        if (input != null) {
+                            try {
+                                String type = String.valueOf(XposedHelpers.getObjectField(input, "type"));
+                                Object convs = XposedHelpers.getObjectField(input, "conversations");
+                                int n = 0;
+                                StringBuilder senders = new StringBuilder();
+                                if (convs instanceof java.util.List) {
+                                    java.util.List<?> list = (java.util.List<?>) convs;
+                                    n = list.size();
+                                    java.util.LinkedHashSet<String> seen = new java.util.LinkedHashSet<>();
+                                    for (Object c : list) {
+                                        String s = String.valueOf(c);
+                                        int colon = s.indexOf(':');
+                                        String sender = (colon > 0 ? s.substring(0, colon) : "").trim();
+                                        if (!sender.isEmpty() && seen.add(sender) && seen.size() <= 3) {
+                                            if (senders.length() > 0) senders.append(',');
+                                            senders.append(sender.length() > 14 ? sender.substring(0, 14) : sender);
+                                        }
+                                        if (seen.size() > 3) break;
+                                    }
+                                }
+                                int length = 0;
+                                try {
+                                    length = XposedHelpers.getIntField(input, "length");
+                                } catch (Throwable ignored) {
+                                }
+                                len = length;
+                                StringBuilder first = new StringBuilder();
+                                if (convs instanceof java.util.List && !((java.util.List<?>) convs).isEmpty()) {
+                                    first.append(String.valueOf(((java.util.List<?>) convs).get(0)));
+                                }
+                                String ex = first.toString().replaceAll("\\s+", " ").trim();
+                                if (ex.length() > 110) ex = ex.substring(0, 110) + "…";
+                                detail = type + "·" + n + "msgs" + (senders.length() > 0 ? "·" + senders : "") + " | " + ex;
+                            } catch (Throwable t) {
+                                detail = "parse:" + t.getClass().getSimpleName();
+                            }
+                        }
+                        broadcastEvent("requested", key, "-", len, detail);
                     } catch (Throwable t) {
-                        logError(lp, "localSummary", t);
+                        logError(lp, "requestedMirror", t);
                     }
                 }
             });
-            XposedBridge.log("[" + TAG + "] hooked LlmServiceRunnable.execute in "
+            XposedBridge.log("[" + TAG + "] hooked summary request mirror in "
                     + lp.packageName + " / " + lp.processName);
         } catch (Throwable t) {
-            logError(lp, "hookSummaryInference", t);
+            logError(lp, "hookSummaryRequested", t);
         }
-    }
-
-    /** Best-effort notification key from the SCS runnable (may be absent). */
-    private static String bestEffortKey(Object runnable) {
-        try {
-            Object source = XposedHelpers.getObjectField(runnable, "mSource");
-            if (source == null) return "-";
-            for (String f : new String[]{"key", "mKey", "notificationKey"}) {
-                try {
-                    Object v = XposedHelpers.getObjectField(source, f);
-                    if (v instanceof String && !((String) v).isEmpty()) return (String) v;
-                } catch (Throwable ignored) {
-                }
-            }
-        } catch (Throwable ignored) {
-        }
-        return "-";
     }
 
     /** Mirrors a summary lifecycle event to the app for the in-app log viewer. */

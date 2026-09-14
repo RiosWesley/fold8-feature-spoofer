@@ -1,2 +1,0 @@
-dev.rios.fold8spoof
-array xposed_scope

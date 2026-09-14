@@ -1,1 +1,0 @@
-dev.rios.fold8spoof:array/xposed_scope = 0x7f010000
