@@ -1,0 +1,84 @@
+-- Merging decision tree log ---
+manifest
+ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:2:1-35:12
+INJECTED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:2:1-35:12
+INJECTED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:2:1-35:12
+INJECTED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:2:1-35:12
+	package
+		INJECTED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml
+	android:versionName
+		INJECTED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml
+	android:versionCode
+		INJECTED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml
+	xmlns:android
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:2:11-69
+application
+ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:3:5-34:19
+	android:extractNativeLibs
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:5:9-41
+	android:label
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:7:9-46
+	android:hasCode
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:6:9-31
+	android:allowBackup
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:4:9-36
+meta-data#xposedmodule
+ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:9:9-71
+	android:value
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:9:48-68
+	android:name
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:9:20-47
+meta-data#xposedminversion
+ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:10:9-73
+	android:value
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:10:52-70
+	android:name
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:10:20-51
+meta-data#xposeddescription
+ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:11:9-13:142
+	android:value
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:13:13-139
+	android:name
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:12:13-45
+meta-data#xposedscope
+ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:14:9-16:54
+	android:resource
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:16:13-51
+	android:name
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:15:13-39
+receiver#dev.rios.fold8spoof.SummaryEventReceiver
+ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:18:9-24:20
+	android:exported
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:20:13-37
+	android:name
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:19:13-49
+intent-filter#action:name:dev.rios.fold8spoof.SUMMARY_EVENT
+ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:21:13-23:29
+action#dev.rios.fold8spoof.SUMMARY_EVENT
+ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:22:17-76
+	android:name
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:22:25-73
+activity#dev.rios.fold8spoof.MainActivity
+ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:26:9-33:20
+	android:exported
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:28:13-36
+	android:name
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:27:13-41
+intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
+ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:29:13-32:29
+action#android.intent.action.MAIN
+ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:30:17-69
+	android:name
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:30:25-66
+category#android.intent.category.LAUNCHER
+ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:31:17-77
+	android:name
+		ADDED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:31:27-74
+uses-sdk
+INJECTED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml
+INJECTED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml

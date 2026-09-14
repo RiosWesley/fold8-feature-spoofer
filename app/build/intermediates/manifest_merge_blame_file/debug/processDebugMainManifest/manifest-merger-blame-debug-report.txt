@@ -1,0 +1,80 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="dev.rios.fold8spoof"
+4    android:versionCode="11"
+5    android:versionName="1.9.1" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="28"
+9        android:targetSdkVersion="28" />
+10
+11    <application
+11-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:3:5-34:19
+12        android:allowBackup="false"
+12-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:4:9-36
+13        android:debuggable="true"
+14        android:extractNativeLibs="true"
+14-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:5:9-41
+15        android:hasCode="true"
+15-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:6:9-31
+16        android:label="Fold8 Feature Spoofer" >
+16-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:7:9-46
+17        <meta-data
+17-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:9:9-71
+18            android:name="xposedmodule"
+18-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:9:20-47
+19            android:value="true" />
+19-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:9:48-68
+20        <meta-data
+20-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:10:9-73
+21            android:name="xposedminversion"
+21-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:10:20-51
+22            android:value="82" />
+22-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:10:52-70
+23        <meta-data
+23-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:11:9-13:142
+24            android:name="xposeddescription"
+24-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:12:13-45
+25            android:value="Spoofs Samsung floating-feature values at runtime: AI_VERSION=20263 and NOW_NUDGE_VERSION=2. No system mounts." />
+25-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:13:13-139
+26        <meta-data
+26-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:14:9-16:54
+27            android:name="xposedscope"
+27-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:15:13-39
+28            android:resource="@array/xposed_scope" />
+28-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:16:13-51
+29
+30        <receiver
+30-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:18:9-24:20
+31            android:name="dev.rios.fold8spoof.SummaryEventReceiver"
+31-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:19:13-49
+32            android:exported="false" >
+32-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:20:13-37
+33            <intent-filter>
+33-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:21:13-23:29
+34                <action android:name="dev.rios.fold8spoof.SUMMARY_EVENT" />
+34-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:22:17-76
+34-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:22:25-73
+35            </intent-filter>
+36        </receiver>
+37
+38        <activity
+38-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:26:9-33:20
+39            android:name="dev.rios.fold8spoof.MainActivity"
+39-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:27:13-41
+40            android:exported="true" >
+40-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:28:13-36
+41            <intent-filter>
+41-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:29:13-32:29
+42                <action android:name="android.intent.action.MAIN" />
+42-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:30:17-69
+42-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:30:25-66
+43
+44                <category android:name="android.intent.category.LAUNCHER" />
+44-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:31:17-77
+44-->C:\Users\ragno\AppData\Local\Temp\opencode\apps\Fold8FeatureSpoofer\app\src\main\AndroidManifest.xml:31:27-74
+45            </intent-filter>
+46        </activity>
+47    </application>
+48
+49</manifest>

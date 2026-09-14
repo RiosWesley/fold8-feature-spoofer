@@ -1,0 +1,1 @@
+int array xposed_scope 0x7f010000

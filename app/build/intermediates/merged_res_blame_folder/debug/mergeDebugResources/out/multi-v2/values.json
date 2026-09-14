@@ -1,0 +1,28 @@
+{
+    "logs": [
+        {
+            "outputFile": "dev.rios.fold8spoof.app-mergeDebugResources-2:/values/values.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\ragno\\AppData\\Local\\Temp\\opencode\\apps\\Fold8FeatureSpoofer\\app\\src\\main\\res\\values\\arrays.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "57",
+                        "endLines": "7",
+                        "endColumns": "19",
+                        "endOffsets": "287"
+                    },
+                    "to": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "7",
+                        "endColumns": "19",
+                        "endOffsets": "280"
+                    }
+                }
+            ]
+        }
+    ]
+}

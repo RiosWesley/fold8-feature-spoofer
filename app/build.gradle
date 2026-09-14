@@ -54,8 +54,8 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
-    // Sideloaded root module, not Play-distributed: targetSdk 28 is
-    // intentional (SELinux domain allows native exec + background starts).
+    // Sideloaded root module, not Play-distributed: targetSdk 28 keeps the
+    // base untrusted_app SELinux domain.
     lint {
         disable 'ExpiredTargetSdkVersion'
     }
@@ -63,6 +63,4 @@ android {
 
 dependencies {
     compileOnly 'de.robv.android.xposed:api:82'
-    implementation 'com.google.ai.edge.litertlm:litertlm-android:0.17.0'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
 }
