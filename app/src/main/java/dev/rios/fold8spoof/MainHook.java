@@ -46,6 +46,10 @@ public final class MainHook implements IXposedHookLoadPackage {
             hookHighlightMirror(lp);
         }
 
+        if ("com.samsung.android.offline.languagemodel".equals(lp.packageName)) {
+            hookOlmTypeFix(lp);
+        }
+
         if (ANDROID_PACKAGE.equals(lp.packageName)) {
             hookScsOndeviceCapability(lp);
             hookSummaryLanguageNormalization(lp);
@@ -592,6 +596,41 @@ public final class MainHook implements IXposedHookLoadPackage {
             return b.toString();
         } catch (Throwable t) {
             return "?";
+        }
+    }
+
+    /**
+     * OLM 2.0.00.4 bug: SCS sends type="action_point_summary" which does not
+     * exist in OLM's Type enum -> OnDeviceRequest.getType() returns null and
+     * PolicyManager.insertUserInputToPrompt NPEs on .ordinal(), killing the
+     * language core on EVERY summary. Map null -> summarize.
+     * Requires module scope for the Offline Language Model app.
+     */
+    private static void hookOlmTypeFix(final XC_LoadPackage.LoadPackageParam lp) {
+        try {
+            Class<?> req = XposedHelpers.findClass(
+                    "com.samsung.android.offline.languagemodel.data.OnDeviceRequest",
+                    lp.classLoader);
+            final Class<?> typeClass = XposedHelpers.findClass(
+                    "com.samsung.android.offline.languagemodel.data.Type",
+                    lp.classLoader);
+            XposedBridge.hookAllMethods(req, "getType", new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    try {
+                        if (param.getResult() != null) return;
+                        Object summarize = XposedHelpers.getStaticObjectField(typeClass, "summarize");
+                        param.setResult(summarize);
+                        XposedBridge.log("[F8] OLM null type -> summarize");
+                    } catch (Throwable t) {
+                        logError(lp, "olmTypeFix", t);
+                    }
+                }
+            });
+            XposedBridge.log("[F8] hooked OLM OnDeviceRequest.getType in "
+                    + lp.packageName + " / " + lp.processName);
+        } catch (Throwable t) {
+            logError(lp, "hookOlmTypeFix", t);
         }
     }
 
