@@ -44,6 +44,10 @@ public final class MainHook implements IXposedHookLoadPackage {
             hookSettingsNotificationIntelligenceGate(lp);
         }
 
+        if ("com.android.systemui".equals(lp.packageName)) {
+            hookHighlightMirror(lp);
+        }
+
         if (ANDROID_PACKAGE.equals(lp.packageName)) {
             hookScsOndeviceCapability(lp);
             hookSummaryLanguageNormalization(lp);
@@ -406,7 +410,6 @@ public final class MainHook implements IXposedHookLoadPackage {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
                     try {
-                        if (!isSummaryBackendEnabled()) return;
                         Object feature = XposedHelpers.getObjectField(param.thisObject, "featureName");
                         if (!LLM_SUMMARY_FEATURE.equals(String.valueOf(feature))) return;
                         Object req = XposedHelpers.getObjectField(param.thisObject, "serviceRequest");
@@ -414,6 +417,9 @@ public final class MainHook implements IXposedHookLoadPackage {
                         String excerpt = text == null ? "" : text.replaceAll("\\s+", " ").trim();
                         if (excerpt.length() > 140) excerpt = excerpt.substring(0, 140) + "…";
                         broadcastEvent("requested", bestEffortKey(param.thisObject), "-", text == null ? -1 : text.length(), excerpt);
+                        // Native mode (OLM 2.x with v75 skel): let Samsung's own
+                        // NPU path run, we only observe via the event mirror.
+                        if (!isSummaryBackendEnabled() || isNativeBackend()) return;
                         String summary = generateLocalSummary(lp, text);
                         if (summary == null || summary.isEmpty()) return;
                         Bundle b = new Bundle();
@@ -541,6 +547,71 @@ public final class MainHook implements IXposedHookLoadPackage {
             return !"off".equals(String.valueOf(v));
         } catch (Throwable t) {
             return true;
+        }
+    }
+
+    /**
+     * Backend selector: setprop persist.fold8.backend native|local (default local).
+     * In native mode our interception is skipped so Samsung's own OLM/NPU path runs.
+     */
+    private static boolean isNativeBackend() {
+        try {
+            Class<?> sp = Class.forName("android.os.SystemProperties");
+            Object v = sp.getMethod("get", String.class, String.class)
+                    .invoke(null, "persist.fold8.backend", "local");
+            return "native".equals(String.valueOf(v));
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    private static String lastHlKeys = "";
+
+    /**
+     * Mirrors Highlights-section membership (blue rows) to the app log viewer.
+     * Broadcasts only on change to avoid spam.
+     */
+    private static void hookHighlightMirror(final XC_LoadPackage.LoadPackageParam lp) {
+        try {
+            Class<?> coord = XposedHelpers.findClass(
+                    "com.android.systemui.statusbar.notification.collection.coordinator.SemHighlightsCoordinator",
+                    lp.classLoader);
+            XposedBridge.hookAllMethods(coord, "updateHighlightsOrder", new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    try {
+                        Object keys = XposedHelpers.getObjectField(param.thisObject, "mCurrentHighlightsKeys");
+                        String s = shortKeys(String.valueOf(keys));
+                        if (s.equals(lastHlKeys)) return;
+                        lastHlKeys = s;
+                        broadcastEvent("highlight", "-", "-", -1, s.isEmpty() ? "(none)" : s);
+                    } catch (Throwable t) {
+                        logError(lp, "hlMirror", t);
+                    }
+                }
+            });
+            XposedBridge.log("[F8] hooked Highlights mirror");
+        } catch (Throwable t) {
+            logError(lp, "hookHighlightMirror", t);
+        }
+    }
+
+    private static String shortKeys(String s) {
+        try {
+            String[] parts = s.replace("[", "").replace("]", "").split(", ");
+            StringBuilder b = new StringBuilder();
+            for (String k : parts) {
+                if (k.trim().isEmpty()) continue;
+                String[] f = k.split("\\|");
+                String tag = f.length > 3 ? f[3] : k;
+                if (tag.length() > 10) tag = tag.substring(tag.length() - 10);
+                if (b.length() > 0) b.append(',');
+                b.append(tag);
+                if (b.length() > 100) break;
+            }
+            return b.toString();
+        } catch (Throwable t) {
+            return "?";
         }
     }
 

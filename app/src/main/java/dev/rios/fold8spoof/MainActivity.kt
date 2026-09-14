@@ -388,7 +388,7 @@ class MainActivity : Activity() {
         val logCard = cardBox()
         logCard.addView(sectionTitle("Summary log"))
         logCard.addView(body(
-            "✓ summarized · … waiting for engine · ✗ failure reason (e.g. language not detected, text too short).", 12.5f))
+            "✓ summarized · … waiting for engine · ✗ failure reason (e.g. language not detected, text too short) · ◆ highlight section members.", 12.5f))
         val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         btnRow.addView(button("Refresh", false) { refreshLogs() }.apply {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
@@ -505,10 +505,22 @@ class MainActivity : Activity() {
                     return@runOnUiThread
                 }
                 modelView.text = if (model != null) {
-                    "Model: ${model.name} (${model.length() / 1048576} MB)"
+                    "Model: ${model.name} (${model.length() / 1048576} MB)\nBackend: ${backendMode()} (persist.fold8.backend)"
                 } else ""
             }
         }, "setup-status").apply { isDaemon = true; start() }
+    }
+
+    /** Best-effort read of our backend selector prop (empty when unreadable). */
+    private fun backendMode(): String {
+        return try {
+            val sp = Class.forName("android.os.SystemProperties")
+            val v = sp.getMethod("get", String::class.java, String::class.java)
+                .invoke(null, "persist.fold8.backend", "local") as? String
+            if (v == "native") "native (Samsung OLM)" else "local (Gemma NPU)"
+        } catch (_: Exception) {
+            "local?"
+        }
     }
 
     private fun probeHealth(): String? {
@@ -553,7 +565,9 @@ class MainActivity : Activity() {
                     val status = p.getOrNull(3) ?: "-"
                     val len = p.getOrNull(4) ?: "-"
                     val detail = p.getOrNull(5) ?: ""
-                    if (kind == "requested") {
+                    if (kind == "highlight") {
+                        "$time ◆ HL: ${(if (detail.isNotEmpty()) detail else "(none)")}"
+                    } else if (kind == "requested") {
                         val l = if (len != "-") " ${len}ch" else ""
                         "$time … $key requested$l" + (if (detail.isNotEmpty()) "\n    “$detail”" else "")
                     } else {
